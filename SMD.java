@@ -3,6 +3,8 @@ package com.umass.healthos.database;
 import java.util.ArrayList;
 import org.joda.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import com.umass.healthos.objects.TypeEnum;
 import com.umass.healthos.objects.Result;
 
@@ -22,7 +24,7 @@ public class SMD {
 	
 	
 	//TEST
-	SMD(Controller instance){
+	public SMD(Controller instance){
 		this.instance = instance;
 	}
 	
@@ -87,7 +89,7 @@ public class SMD {
 	 *            - the List<Result> to be added to the database
 	 * @return boolean success value
 	 */
-	public boolean addResults(List<Result> results) {
+	public boolean addResults(CopyOnWriteArrayList<Result> results) {
 		boolean ret = true;
 		for (Result n : results) {
 			if (!instance.addResult(n)) // if add fails, report it but continue to

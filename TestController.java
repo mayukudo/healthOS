@@ -21,7 +21,7 @@ public class TestController extends Controller{
 	private List<Result> surveys;
 	private List<Result> medications;
 	private List<Result> physicalReports;
-	
+
 	public void initializeSurveys(){
 		surveys = new ArrayList<Result>();
 		surveys.add(new Result(1, SURVEY, new LocalDateTime(2014, 4, 12, 10, 23), taken, 1));
@@ -94,7 +94,7 @@ public class TestController extends Controller{
 		initializeResults();
 	}
 	
-	public List<Result> getResults(TypeEnum type){
+	public List<Result> getResultsByType(TypeEnum type){
 		List<Result> li = new ArrayList<Result>();
 		for (Result r : results)
 			if (r.getType() == type) li.add(r);
@@ -124,7 +124,7 @@ public class TestController extends Controller{
 
 	public boolean addResults(List<Result> results) {
 		for (Result r : results)
-			if(!results.add(r)) return false;
+			if(!addResult(r)) return false;
 		return true;
 	}
 

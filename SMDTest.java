@@ -1,20 +1,20 @@
 package com.umass.healthos.database;
 
+import static org.junit.Assert.*;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
+import org.junit.Test;
 
-import com.umass.healthos.objects.TypeEnum;
 import com.umass.healthos.objects.Result;
+import com.umass.healthos.objects.TypeEnum;
 
-import junit.framework.TestCase;
-
-public class SMDTest extends TestCase {
+public class SMDTest {
 	/********** TESTING ************/
 	private static final boolean test = true;
-	private static Result res;
 
 	/********** TEST DATA **********/
 	private static LocalDateTime localTime;
@@ -23,7 +23,6 @@ public class SMDTest extends TestCase {
 	private static TypeEnum med;
 	private static TypeEnum survey;
 	private static TypeEnum report;
-	private static TypeEnum type;
 	private static List<Result> resultList;
 	private static String csv;
 	private static TestController testController;
@@ -35,15 +34,17 @@ public class SMDTest extends TestCase {
 		startTime = new LocalDateTime(2014, 4, 12, 0, 0);
 		endTime = new LocalDateTime(2014, 4, 14, 23, 59);
 		med = TypeEnum.MEDICATION;
+		survey = TypeEnum.SURVEY;
+		report = TypeEnum.PHYSICAL_REPORT;
 		testController = new TestController();
 		smd = new SMD(testController);
 	}
 	
-	private SMDTest(){
+	public SMDTest(){
 		initialize();
 	}
 	
-	
+	@Test
 	// if we make a new LocalDate we need to continuously change our mockdata. Thus I am using endTime instead.
 	public void testGetResultsLocalDateTimeTypeEnum() {
 		if(test){ 
@@ -68,6 +69,7 @@ public class SMDTest extends TestCase {
 		}
 	}
 
+	@Test
 	public void testGetResultsTypeEnum() {
 		if(test){
 			resultList = smd.getResults(med);
@@ -92,6 +94,7 @@ public class SMDTest extends TestCase {
 		}
 	}
 	
+	@Test
 	public void testGetResultsByTimeSpan() {
 		if(test){ 
 			resultList = smd.getResultsByTimeSpan(startTime, endTime, med);
@@ -115,26 +118,29 @@ public class SMDTest extends TestCase {
 		}
 	}
 
-	public void testAddResults() {
+	@Test
+	public void testAddResults(){
 		if(test){
-			List<Result> results = new ArrayList<Result>();
-			Result r1 = new Result(1, med, new LocalDateTime(2014, 4, 17, 10, 23), taken, 1);
-			Result r2 = new Result(1, med, new LocalDateTime(2014, 4, 18, 22, 23), taken, 1);
-			results.add(r1);
-			results.add(r2);
-			testController.addResults(results);
-			resultList = smd.getResults(med);
-			if (!resultList.contains(r1) || !resultList.contains(r2)) fail("Wrong");		
+			List<Result> results = new CopyOnWriteArrayList<Result>();
+			 Result r1 = new Result(1, med, new LocalDateTime(2014, 4, 17, 10, 23), taken, 1);
+			 Result r2 = new Result(1, med, new LocalDateTime(2014, 4, 18, 22, 23), taken, 1);
+			 results.add(r1);
+			 results.add(r2);
+			 testController.addResults(results);
+			 resultList = smd.getResults(med);
+			 if (!resultList.contains(r1) || !resultList.contains(r2)) 
+				 fail("Wrong");
 		}
 	}
 
+	@Test
 	public void testAddResult() {
 		if(test){
 			// med
 			Result m = new Result(1, med, new LocalDateTime(2014, 4, 16, 10, 23), taken, 1);
 			testController.addResult(m);
 			resultList = smd.getResults(med);
-			if (!resultList.contains(m)) fail("Wrong");
+			if (resultList != null && !resultList.contains(m)) fail("Wrong");
 			
 			// report
 			List<String> bpHigh = new ArrayList<String>();
@@ -152,6 +158,7 @@ public class SMDTest extends TestCase {
 		}
 	}
 
+	@Test
 	public void testGetCSV() {
 		if(test){
 			csv = smd.getCSV();
@@ -160,5 +167,6 @@ public class SMDTest extends TestCase {
 			}
 		}
 	}
+
 
 }
