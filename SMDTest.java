@@ -1,172 +1,272 @@
-package com.umass.healthos.database;
-
-import static org.junit.Assert.*;
+package com.umass.healthos.database.test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
+import junit.framework.TestCase;
 import org.joda.time.LocalDateTime;
-import org.junit.Test;
-
+import com.umass.healthos.database.SMD;
 import com.umass.healthos.objects.Result;
 import com.umass.healthos.objects.TypeEnum;
 
-public class SMDTest {
+public class SMDTest extends TestCase {
+	
 	/********** TESTING ************/
 	private static final boolean test = true;
 
 	/********** TEST DATA **********/
 	private static LocalDateTime localTime;
-	private static LocalDateTime startTime;
 	private static LocalDateTime endTime;
-	private static TypeEnum med;
-	private static TypeEnum survey;
-	private static TypeEnum report;
 	private static List<Result> resultList;
-	private static String csv;
-	private static TestController testController;
+	private static String[] csv;
+	private MockDatabase db;
 	private static SMD smd;
 	List<String> taken = new ArrayList<String>();
+	private TypeEnum MEDICATION;
+	private TypeEnum PHYSICAL_REPORT;
+	private TypeEnum SURVEY; 
 	
-	private void initialize(){
+	public void initializeMedications(){
+		db.addResult(new Result(1, MEDICATION, new LocalDateTime(2014, 4, 11, 10, 23), taken, 1));
+		db.addResult(new Result(2, MEDICATION, new LocalDateTime(2014, 4, 12, 22, 23), taken, 0));
+		db.addResult(new Result(1, MEDICATION, new LocalDateTime(2014, 4, 13, 10, 23), taken, 2));
+		db.addResult(new Result(2, MEDICATION, new LocalDateTime(2014, 4, 14, 22, 23), taken, 3));
+		db.addResult(new Result(1, MEDICATION, new LocalDateTime(2014, 4, 15, 10, 23), taken, 0));
+	}
+	
+	public void initializePhysicalReports(){
+		List<String> bpHigh = new ArrayList<String>();
+		List<String> bpLow = new ArrayList<String>();
+		bpHigh.add("120");
+		bpLow.add("90");
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 9, 00, 23), bpHigh, 0));
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 9, 00, 23), bpLow, 0));
+		bpHigh.add("119");
+		bpLow.add("92");
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 9, 12, 23), bpHigh, 0));
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 9, 12, 23), bpLow, 0));
+		bpHigh.add("121");
+		bpLow.add("93");
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 10, 00, 23), bpHigh, 0));
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 10, 00, 23), bpLow, 0));
+		bpHigh.add("118");
+		bpLow.add("89");
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 15, 12, 23), bpHigh, 0));
+		db.addResult(new Result(1, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 15, 12, 23), bpLow, 0));
+
+	}
+	
+	public void initializeSurveys(){
+		db.addResult(new Result(1, SURVEY, new LocalDateTime(2014, 4, 11, 10, 23), taken, 1));
+		db.addResult(new Result(1, SURVEY, new LocalDateTime(2014, 4, 12, 22, 23), taken, 0));
+		db.addResult(new Result(1, SURVEY, new LocalDateTime(2014, 4, 13, 10, 23), taken, 2));
+		db.addResult(new Result(1, SURVEY, new LocalDateTime(2014, 4, 13, 22, 23), taken, 3));
+		db.addResult(new Result(1, SURVEY, new LocalDateTime(2014, 4, 14, 10, 23), taken, 1));
+		db.addResult(new Result(1, SURVEY, new LocalDateTime(2014, 4, 15, 22, 23), taken, 0));
+	}
+	
+
+	public void setUp(){
 		localTime = new LocalDateTime(2014, 4, 13, 11, 30);
-		startTime = new LocalDateTime(2014, 4, 12, 0, 0);
+		new LocalDateTime(2014, 4, 12, 0, 0);
 		endTime = new LocalDateTime(2014, 4, 14, 23, 59);
-		med = TypeEnum.MEDICATION;
-		survey = TypeEnum.SURVEY;
-		report = TypeEnum.PHYSICAL_REPORT;
-		testController = new TestController();
-		smd = new SMD(testController);
+		MEDICATION = TypeEnum.MEDICATION;
+		SURVEY = TypeEnum.SURVEY;
+		PHYSICAL_REPORT = TypeEnum.PHYSICAL_REPORT;
+		db = new MockDatabase();
+		smd = new SMD(db);
+		initializeMedications();
+		initializePhysicalReports();
+		initializeSurveys();
+		taken.add("taken");
 	}
 	
 	public SMDTest(){
-		initialize();
+		super();
+		//this.setName("SMDTest");
 	}
-	
-	@Test
+
+
 	// if we make a new LocalDate we need to continuously change our mockdata. Thus I am using endTime instead.
 	public void testGetResultsLocalDateTimeTypeEnum() {
+		clearData();
+		TypeEnum m;
 		if(test){ 
-			resultList = smd.getResultsByTimeSpan(localTime, endTime, med);
+			resultList = smd.getResultsByTimeSpan(localTime, endTime, MEDICATION);
 			for (Result r: resultList){
-				if(!testController.getMedications().contains(r)){
-					fail("Wrong");
+				m = r.getType();
+				if(m != MEDICATION)
+					fail("Expected: " + MEDICATION + "returned: " + m);
+				if(!(db.contains(r, MEDICATION, localTime, endTime))){
+					fail("Database does not contain result #" + r.getID());
 				}
 			}
-			resultList = smd.getResultsByTimeSpan(localTime, endTime, report);
+			resultList = smd.getResultsByTimeSpan(localTime, endTime, PHYSICAL_REPORT);
 			for (Result r: resultList){
-				if(!testController.getReports().contains(r)){
-					fail("Wrong");
+				m = r.getType();
+				if(m != PHYSICAL_REPORT)
+					fail("Expected: " + PHYSICAL_REPORT + "returned: " + m);
+				if(!(db.contains(r, PHYSICAL_REPORT, localTime, endTime))){
+					fail("Database does not contain result #" + r.getID());
 				}
 			}
-			resultList = smd.getResultsByTimeSpan(localTime, endTime, survey);
+			resultList = smd.getResultsByTimeSpan(localTime, endTime, SURVEY);
 			for (Result r: resultList){
-				if(!testController.getSurveys().contains(r)){
-					fail("Wrong");
+				m = r.getType();
+				if(m != SURVEY)
+					fail("Expected: " + SURVEY + "returned: " + m);
+				if(!(db.contains(r, SURVEY, localTime, endTime))){
+					fail("Database does not contain result #" + r.getID());
 				}
 			}
 		}
 	}
 
-	@Test
+
 	public void testGetResultsTypeEnum() {
+		clearData();
+		TypeEnum m;
 		if(test){
-			resultList = smd.getResults(med);
+			resultList = smd.getResults(MEDICATION);
 			for (Result r: resultList){
-				if(!testController.getMedications().contains(r)){
-					fail("Wrong");
+				m = r.getType();
+				if(m != MEDICATION)
+					fail("Expected: " + MEDICATION + "returned: " + m);
+				if(!(db.contains(r, MEDICATION, null, null))){
+					fail("Database does not contain result #" + r.getID());
 				}
 			}
-			resultList = smd.getResults(report);
+			resultList = smd.getResults(PHYSICAL_REPORT);
 			for (Result r: resultList){
-				if(!testController.getReports().contains(r)){
-					fail("Wrong");
+				m = r.getType();
+				if(m != PHYSICAL_REPORT)
+					fail("Expected: " + PHYSICAL_REPORT + "returned: " + m);
+				if(!(db.contains(r, PHYSICAL_REPORT, null, null))){
+					fail("Database does not contain result #" + r.getID());
 				}
 			}
-			resultList = smd.getResults(survey);
+			resultList = smd.getResults(SURVEY);
 			for (Result r: resultList){
-				if(!testController.getSurveys().contains(r)){
-					fail("Wrong");
+				m = r.getType();
+				if(m != SURVEY)
+					fail("Expected: " + SURVEY + "returned: " + m);
+				if(!(db.contains(r, SURVEY, null, null))){
+					fail("Database does not contain result #" + r.getID());
 				}
 			}
-			
 		}
 	}
 	
-	@Test
-	public void testGetResultsByTimeSpan() {
-		if(test){ 
-			resultList = smd.getResultsByTimeSpan(startTime, endTime, med);
-			for (Result r: resultList){
-				if(!testController.getMedications().contains(r)){
-					fail("Wrong");
-				}
-			}
-			resultList = smd.getResultsByTimeSpan(startTime, endTime, report);
-			for (Result r: resultList){
-				if(!testController.getReports().contains(r)){
-					fail("Wrong");
-				}
-			}
-			resultList = smd.getResultsByTimeSpan(startTime, endTime, survey);
-			for (Result r: resultList){
-				if(!testController.getSurveys().contains(r)){
-					fail("Wrong");
-				}
-			}
-		}
-	}
+	//duplicated test?
+//	public void testGetResultsByTimeSpan() {
+//		clearData();
+//		TypeEnum m;
+//		if(test){ 
+//			resultList = smd.getResultsByTimeSpan(startTime, endTime, MEDICATION);
+//			for (Result r: resultList){
+//				m = r.getType();
+//				if(m != MEDICATION)
+//					fail("Expected: " + MEDICATION + "returned: " + m);
+//				if(!(db.getResultsByType(MEDICATION).contains(r))){
+//					fail("Database does not contain result #" + r.getID() + " given ("+resultsAsString()+")");
+//				}
+//			}
+//			resultList = smd.getResultsByTimeSpan(startTime, endTime, PHYSICAL_REPORT);
+//			for (Result r: resultList){
+//				m = r.getType();
+//				if(m != MEDICATION)
+//					fail("Expected: " + PHYSICAL_REPORT + "returned: " + m);
+//				if(!(db.getResultsByType(MEDICATION).contains(r))){
+//					fail("Database does not contain result #" + r.getID() + " given ("+resultsAsString()+")");
+//				}
+//			}
+//			resultList = smd.getResultsByTimeSpan(startTime, endTime, SURVEY);
+//			for (Result r: resultList){
+//				m = r.getType();
+//				if(m != MEDICATION)
+//					fail("Expected: " + SURVEY + "returned: " + m);
+//				if(!(db.getResultsByType(MEDICATION).contains(r))){
+//					fail("Database does not contain result #" + r.getID() + " given ("+resultsAsString()+")");
+//				}
+//			}
+//		}
+//	}
 
-	@Test
+
 	public void testAddResults(){
+		clearData();
 		if(test){
-			List<Result> results = new CopyOnWriteArrayList<Result>();
-			 Result r1 = new Result(1, med, new LocalDateTime(2014, 4, 17, 10, 23), taken, 1);
-			 Result r2 = new Result(1, med, new LocalDateTime(2014, 4, 18, 22, 23), taken, 1);
-			 results.add(r1);
-			 results.add(r2);
-			 testController.addResults(results);
-			 resultList = smd.getResults(med);
+			 Result r1 = new Result(41, MEDICATION, new LocalDateTime(2014, 4, 17, 10, 23), taken, 1);
+			 Result r2 = new Result(42, MEDICATION, new LocalDateTime(2014, 4, 18, 22, 23), taken, 1);
+			 resultList = new ArrayList<Result>();
+			 resultList.add(r1);
+			 resultList.add(r2);
+			 assertTrue(smd.addResults(resultList));
+			 resultList = smd.getResults(MEDICATION);
 			 if (!resultList.contains(r1) || !resultList.contains(r2)) 
 				 fail("Wrong");
 		}
 	}
 
-	@Test
+	
 	public void testAddResult() {
+		clearData();
 		if(test){
-			// med
-			Result m = new Result(1, med, new LocalDateTime(2014, 4, 16, 10, 23), taken, 1);
-			testController.addResult(m);
-			resultList = smd.getResults(med);
-			if (resultList != null && !resultList.contains(m)) fail("Wrong");
+			Result temp;
 			
-			// report
+			// MEDICATION
+			
+			temp = new Result(42, MEDICATION, new LocalDateTime(2014, 4, 16, 10, 23), null, 1);
+			assertTrue(smd.addResult(temp));
+			resultList = smd.getResults(MEDICATION);
+			assertNotNull(resultList);
+			if (!resultList.contains(temp))
+				fail("Failed inserting medication result: expected " + temp.getID() + " but got " + resultsAsString());
+			
+			// PHYSICAL_REPORT
 			List<String> bpHigh = new ArrayList<String>();
 			bpHigh.add("120");
-			Result r = new Result(1, report, new LocalDateTime(2014, 4, 9, 00, 23), bpHigh, 0);
-			testController.addResult(r);
-			resultList = smd.getResults(report);
-			if (!resultList.contains(r)) fail("Wrong");
+			temp = new Result(43, PHYSICAL_REPORT, new LocalDateTime(2014, 4, 9, 00, 23), bpHigh, 0);
+			db.addResult(temp);
+			resultList = smd.getResults(PHYSICAL_REPORT);
+			if (resultList == null || !resultList.contains(temp)) 
+				fail("Failed inserting physical report");
 			
-			// survey
-			Result s = new Result(1, survey, new LocalDateTime(2014, 4, 16, 10, 23), taken, 1);
-			testController.addResult(s);
-			resultList = smd.getResults(survey);
-			if (!resultList.contains(s)) fail("Wrong");
+			// SURVEY
+			temp = new Result(44, SURVEY, new LocalDateTime(2014, 4, 16, 10, 23), null, 1);
+			db.addResult(temp);
+			resultList = smd.getResults(SURVEY);
+			if (resultList == null || !resultList.contains(temp)) 
+				fail("Failed inserting survey result");
+			
+			clearData();
 		}
 	}
 
-	@Test
-	public void testGetCSV() {
+	
+	public void testGetCSVs() {
+		clearData();
 		if(test){
-			csv = smd.getCSV();
-			if(!testController.getCSV().equals(csv)){
+			csv = smd.getCSVs();
+			if(!db.getCSVs().equals(csv)){
 				fail("Wrong");
 			}
 		}
 	}
-
+	
+	private String resultsAsString(){
+		String ret = "";
+		int length = resultList.size();
+		for(int i=0; i<length; i++){
+			ret += resultList.get(i).getID() + (i <length-1 ? "," : "");
+		}
+		return ret;
+	}
+	
+	private void clearData(){
+		db.clearData();
+		initializeMedications();
+		initializePhysicalReports();
+		initializeSurveys();
+	}
 
 }

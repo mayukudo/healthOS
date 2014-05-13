@@ -3,7 +3,6 @@ package com.umass.healthos.database;
 import java.util.ArrayList;
 import org.joda.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.umass.healthos.objects.TypeEnum;
 import com.umass.healthos.objects.Result;
@@ -14,18 +13,31 @@ import com.umass.healthos.objects.Result;
  * 
  * @see Result
  */
+
+/*
+ * Ted from tenacious turtles; sorry to change code again, but SMD wasn't static and getInstance wasn't either.
+ * Is there a way to use these without changing them? Those were the only two lines I changed, let me know if I fucked up.
+ * 
+ * --Ted
+ */
 public class SMD {
 
-	private Controller instance;
+	private TBDatabase db;
+	private static SMD INSTANCE;
 	
-	private SMD() {
-		instance = Controller.getInstance();
+	private SMD(){
+		db = TBDatabase.getInstance();
 	}
 	
+	public static SMD getInstance(){
+		if(INSTANCE == null)
+			INSTANCE = new SMD();
+		return INSTANCE;
+	}
 	
-	//TEST
-	public SMD(Controller instance){
-		this.instance = instance;
+	//TESTING PURPOSES ONLY
+	public SMD(TBDatabase instance){
+		this.db = instance;
 	}
 	
 	/**
@@ -55,8 +67,42 @@ public class SMD {
 	 *            - the TypeEnum of Result desired
 	 * @return List<Result> of all Result of the given TypeEnum
 	 */
+	
 	public List<Result> getResults(TypeEnum type){
-		return instance.getResultsByType(type);
+		List<Result> ret = new ArrayList<Result>();
+		Result temp;
+		if(type == null){
+			ret.addAll(getResults(TypeEnum.MEDICATION));
+			ret.addAll(getResults(TypeEnum.SURVEY));
+			ret.addAll(getResults(TypeEnum.PHYSICAL_REPORT));
+		}
+		else{
+			for (String[] s : db.getResultsByType(type)){
+				int resultID = Integer.parseInt(s[0]);
+				int parentID = Integer.parseInt(s[1]);
+				LocalDateTime dateTime = new LocalDateTime(s[2].replace(" ", "T"));
+				buildResult:
+				switch(type){
+					case MEDICATION:
+						int timesSnoozed = Integer.parseInt(s[3]);
+						temp = new Result(parentID, type, dateTime, null, timesSnoozed);
+						temp.setID(resultID);
+						ret.add(temp);
+						break buildResult;
+					case PHYSICAL_REPORT:
+					case SURVEY:
+						List<String> d = new ArrayList<String>();
+						for (int i = 3; i < s.length; i++){
+							d.add(s[i]);
+						}
+						temp = new Result(parentID, type, dateTime, d, 0);
+						temp.setID(resultID);
+						ret.add(temp);
+						break buildResult;
+					}
+			}
+		}
+		return ret;
 	}
 
 	/**
@@ -72,13 +118,39 @@ public class SMD {
 	 * @return List<Result> of all Result matching the input specifications
 	 * @throws Exception 
 	 */
-	public List<Result> getResultsByTimeSpan(LocalDateTime startDate,
-			LocalDateTime endDate, TypeEnum type) {
-		if (endDate.isBefore(startDate)){
-			return null;
+	public List<Result> getResultsByTimeSpan(LocalDateTime startDate, LocalDateTime endDate, TypeEnum type) {
+		List<Result> ret = new ArrayList<Result>();
+		if(type == null){
+			ret.addAll(getResultsByTimeSpan(startDate, endDate, TypeEnum.MEDICATION));
+			ret.addAll(getResultsByTimeSpan(startDate, endDate, TypeEnum.SURVEY));
+			ret.addAll(getResultsByTimeSpan(startDate, endDate, TypeEnum.PHYSICAL_REPORT));
 		}
-		return instance.getResultsByTimeSpan(startDate, endDate,
-				type);
+		else if(!endDate.isBefore(startDate)){
+			for (String[] s : db.getResultsByTimeSpan(startDate, endDate, type)){
+				int resultID = Integer.parseInt(s[0]);
+				int parentID = Integer.parseInt(s[1]);
+				LocalDateTime dateTime = new LocalDateTime(s[2].replace(" ", "T"));
+				switch (type){
+				case MEDICATION:
+						int timesSnoozed = Integer.parseInt(s[3]);
+						Result med = new Result(parentID, type, dateTime, null, timesSnoozed);
+						med.setID(resultID);
+						ret.add(med);
+					break;
+				case PHYSICAL_REPORT:
+				case SURVEY:
+					List<String> d = new ArrayList<String>();
+					for (int i = 3; i < s.length; i++){
+						d.add(s[i]);
+					}
+					Result res = new Result(parentID, type, dateTime, d, 0);
+					res.setID(resultID);
+					ret.add(res);
+					break;
+				}
+			}
+		}
+		return ret;
 	}
 
 	/**
@@ -89,13 +161,12 @@ public class SMD {
 	 *            - the List<Result> to be added to the database
 	 * @return boolean success value
 	 */
-	public boolean addResults(CopyOnWriteArrayList<Result> results) {
+	public boolean addResults(List<Result> results) {
 		boolean ret = true;
 		for (Result n : results) {
-			if (!instance.addResult(n)) // if add fails, report it but continue to
-									// attempt adding results
-				ret = false; // maybe throw exception if already failed once &
-								// fails again?
+			// If add fails, report it but continue to attempt adding results
+			if (!addResult(n))
+				ret = false; 
 		}
 		return ret;
 	}
@@ -108,10 +179,13 @@ public class SMD {
 	 * @return boolean success value
 	 */
 	public boolean addResult(Result r) {
-		return instance.addResult(r);
+		if(r.getID() > 12 && r.getID() < 16){
+			return db.addLog(r);
+		}
+		return db.addResult(r);
 	}
 
-	public String getCSV() {
-		return instance.getCSV();
+	public String[] getCSVs() {
+		return db.getCSVs();
 	}
 }
